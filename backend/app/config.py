@@ -47,7 +47,9 @@ class Settings(BaseSettings):
     def mysql_url(self) -> str:
         """Return a SQLAlchemy URL without exposing a password in logs."""
         if not self.mysql_user or self.mysql_user.strip() == "":
-            return "sqlite:///./isaac.db"
+            import os
+            db_path = os.environ.get("SQLITE_DB_PATH", "./isaac.db")
+            return f"sqlite:///{db_path}"
         return (
             f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}"
             f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#14B8A6" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#090E17" />
+  <!-- Shield Outline -->
+  <path d="M32 8 L50 16 V32 C50 43.5 42 52.5 32 56 C22 52.5 14 43.5 14 32 V16 Z" 
+        fill="url(#shieldGrad)" stroke="url(#glowGrad)" stroke-width="2.5" />
+  <!-- AI Pulse Node -->
+  <circle cx="32" cy="28" r="6" fill="#38BDF8" />
+  <circle cx="32" cy="28" r="10" fill="none" stroke="#38BDF8" stroke-width="1.5" opacity="0.6" />
+  <!-- Sensor Ray Lines -->
+  <path d="M32 38 L32 46 M24 34 L19 41 M40 34 L45 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" />
+</svg>

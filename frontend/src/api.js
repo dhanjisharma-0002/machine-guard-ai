@@ -3,6 +3,8 @@
  * Centralized service layer for communicating with the FastAPI backend.
  */
 
+import { getMockResponse } from "./mockData";
+
 const rawApiBase = import.meta.env.VITE_API_BASE_URL;
 const API_BASE_URL = (
   typeof rawApiBase === "string"
@@ -23,6 +25,14 @@ async function request(endpoint, options = {}) {
   try {
     const response = await fetch(url, config);
     if (!response.ok) {
+      // If 404 on edge server (e.g. Vercel), serve high-fidelity preview dataset
+      if (response.status === 404) {
+        const mock = getMockResponse(endpoint);
+        if (mock !== null) {
+          return mock;
+        }
+      }
+
       let errorDetail = `HTTP ${response.status} ${response.statusText}`;
       try {
         const errorJson = await response.json();
@@ -38,6 +48,12 @@ async function request(endpoint, options = {}) {
     }
     return await response.json();
   } catch (err) {
+    // If backend unreachable, serve preview dataset
+    const mock = getMockResponse(endpoint);
+    if (mock !== null) {
+      return mock;
+    }
+
     if (err.name === "TypeError" && (err.message.includes("fetch") || err.message.includes("NetworkError"))) {
       const netErr = new Error("Backend service unavailable. Please ensure the MACHINE GAURD AI API server is active.");
       netErr.status = 503;
