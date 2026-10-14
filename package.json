@@ -1,0 +1,11 @@
+{
+  "name": "machine-guard-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MACHINE GAURD AI / I.S.A.A.C. - Industrial Systems Analytics & Asset Control",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev",
+    "test": "cd frontend && npm test"
+  }
+}

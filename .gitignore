@@ -1,0 +1,51 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.env
+secrets/
+credentials.json
+*.pem
+*.key
+*.cert
+*.crt
+
+# Python cache and byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test & coverage
+.pytest_cache/
+*.zip
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Node.js and Frontend builds
+node_modules/
+frontend/dist/
+dist/
+.npm
+.vercel
+.edge-temp/
+
+# Database files & logs
+*.log
+logs/
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.git_backup/
+*.swp
+*.swo
