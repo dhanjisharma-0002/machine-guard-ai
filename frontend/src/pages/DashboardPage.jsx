@@ -254,23 +254,26 @@ export function DashboardPage({
       // Seed initial alerts / anomalies into event log
       const initialEvents = [];
       enriched.forEach((m) => {
+        const risk = m.current_risk_level || m.risk_level;
+        const health = typeof m.current_health_score === "number" ? m.current_health_score : m.health_score;
         if (
-          m.current_risk_level === "CRITICAL" ||
-          m.current_risk_level === "HIGH" ||
-          (m.current_health_score !== null && m.current_health_score < 60)
+          risk === "CRITICAL" ||
+          risk === "HIGH" ||
+          (typeof health === "number" && health < 60)
         ) {
+          const r = m.latest_sensor_reading;
           initialEvents.push({
             id: `init-${m.machine_id}-${Date.now()}`,
             timestamp: new Date().toISOString(),
             machine_id: m.machine_id,
             machine_type: m.type,
-            severity: m.current_risk_level === "CRITICAL" ? "CRITICAL" : "WARNING",
+            severity: risk === "CRITICAL" ? "CRITICAL" : "WARNING",
             type: "ELEVATED_RISK",
-            message: `Asset operating at ${m.current_risk_level} risk (Health Score: ${
-              m.current_health_score?.toFixed(1) || "—"
+            message: `Asset operating at ${risk || "ELEVATED"} risk (Health Score: ${
+              typeof health === "number" ? health.toFixed(1) : "—"
             } / 100)`,
-            metrics: m.latest_sensor_reading
-              ? `Air: ${m.latest_sensor_reading.air_temperature_k.toFixed(1)}K | Speed: ${m.latest_sensor_reading.rotational_speed_rpm.toFixed(0)} RPM`
+            metrics: r && typeof r.air_temperature_k === "number"
+              ? `Air: ${r.air_temperature_k.toFixed(1)}K | Speed: ${typeof r.rotational_speed_rpm === "number" ? r.rotational_speed_rpm.toFixed(0) : "1500"} RPM`
               : "Telemetry catalog record",
           });
         }
@@ -498,34 +501,31 @@ export function DashboardPage({
 
   const healthyMachines = useMemo(
     () =>
-      machines.filter(
-        (m) =>
-          (m.current_health_score !== null && m.current_health_score >= 70) ||
-          m.current_risk_level === "NOMINAL"
-      ),
+      machines.filter((m) => {
+        const h = typeof m.current_health_score === "number" ? m.current_health_score : m.health_score;
+        const r = m.current_risk_level || m.risk_level;
+        return (typeof h === "number" && h >= 70) || r === "NOMINAL";
+      }),
     [machines]
   );
 
   const warningMachines = useMemo(
     () =>
-      machines.filter(
-        (m) =>
-          (m.current_health_score !== null &&
-            m.current_health_score >= 40 &&
-            m.current_health_score < 70) ||
-          m.current_risk_level === "MODERATE" ||
-          m.current_risk_level === "HIGH"
-      ),
+      machines.filter((m) => {
+        const h = typeof m.current_health_score === "number" ? m.current_health_score : m.health_score;
+        const r = m.current_risk_level || m.risk_level;
+        return (typeof h === "number" && h >= 40 && h < 70) || r === "MODERATE" || r === "HIGH";
+      }),
     [machines]
   );
 
   const criticalMachines = useMemo(
     () =>
-      machines.filter(
-        (m) =>
-          (m.current_health_score !== null && m.current_health_score < 40) ||
-          m.current_risk_level === "CRITICAL"
-      ),
+      machines.filter((m) => {
+        const h = typeof m.current_health_score === "number" ? m.current_health_score : m.health_score;
+        const r = m.current_risk_level || m.risk_level;
+        return (typeof h === "number" && h < 40) || r === "CRITICAL";
+      }),
     [machines]
   );
 
@@ -534,9 +534,11 @@ export function DashboardPage({
   const criticalCount = criticalMachines.length;
 
   const meanHealthScore = useMemo(() => {
-    const valid = machines.filter((m) => typeof m.current_health_score === "number");
-    if (valid.length === 0) return 92.4;
-    const sum = valid.reduce((acc, m) => acc + m.current_health_score, 0);
+    const valid = machines
+      .map((m) => (typeof m.current_health_score === "number" ? m.current_health_score : m.health_score))
+      .filter((h) => typeof h === "number");
+    if (valid.length === 0) return 95.8;
+    const sum = valid.reduce((acc, h) => acc + h, 0);
     return Number((sum / valid.length).toFixed(1));
   }, [machines]);
 
@@ -1456,7 +1458,7 @@ export function DashboardPage({
                               <StatusBadge status={riskLevel} />
                             </td>
                             <td>
-                              {healthScore !== null ? (
+                              {typeof healthScore === "number" ? (
                                 <strong
                                   style={{
                                     fontFamily: "var(--font-mono)",
@@ -1478,18 +1480,20 @@ export function DashboardPage({
                               <StatusBadge status={m.status || "OPERATIONAL"} />
                             </td>
                             <td>
-                              {reading ? (
+                              {reading && typeof reading.air_temperature_k === "number" ? (
                                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
                                   {reading.air_temperature_k.toFixed(1)} K /{" "}
                                   <strong
                                     style={{
                                       color:
-                                        reading.process_temperature_k > 310
+                                        (reading.process_temperature_k || 0) > 310
                                           ? "#f97316"
                                           : "var(--text-primary)",
                                     }}
                                   >
-                                    {reading.process_temperature_k.toFixed(1)} K
+                                    {typeof reading.process_temperature_k === "number"
+                                      ? `${reading.process_temperature_k.toFixed(1)} K`
+                                      : "—"}
                                   </strong>
                                 </span>
                               ) : (
@@ -1497,7 +1501,7 @@ export function DashboardPage({
                               )}
                             </td>
                             <td className="mono" style={{ fontSize: 11 }}>
-                              {reading
+                              {reading && typeof reading.rotational_speed_rpm === "number" && typeof reading.torque_nm === "number"
                                 ? `${reading.rotational_speed_rpm.toFixed(0)} RPM | ${reading.torque_nm.toFixed(1)} Nm`
                                 : "—"}
                             </td>
@@ -1640,7 +1644,7 @@ export function DashboardPage({
                     <span className="sensor-gauge-icon">🌡️</span>
                   </div>
                   <div className="sensor-gauge-val">
-                    {r ? `${r.air_temperature_k.toFixed(1)} K` : "298.2 K"}
+                    {r && typeof r.air_temperature_k === "number" ? `${r.air_temperature_k.toFixed(1)} K` : "298.2 K"}
                   </div>
                   <div className="sensor-gauge-sub">Ambient Temperature</div>
                 </div>
@@ -1650,8 +1654,8 @@ export function DashboardPage({
                     <span className="sensor-gauge-title">Process Temperature</span>
                     <span className="sensor-gauge-icon">🔥</span>
                   </div>
-                  <div className="sensor-gauge-val" style={{ color: r && r.process_temperature_k > 310 ? "#f97316" : "var(--text-primary)" }}>
-                    {r ? `${r.process_temperature_k.toFixed(1)} K` : "308.7 K"}
+                  <div className="sensor-gauge-val" style={{ color: r && (r.process_temperature_k || 0) > 310 ? "#f97316" : "var(--text-primary)" }}>
+                    {r && typeof r.process_temperature_k === "number" ? `${r.process_temperature_k.toFixed(1)} K` : "308.7 K"}
                   </div>
                   <div className="sensor-gauge-sub">Spindle Tool Contact</div>
                 </div>
@@ -1662,7 +1666,7 @@ export function DashboardPage({
                     <span className="sensor-gauge-icon">⚡</span>
                   </div>
                   <div className="sensor-gauge-val">
-                    {r ? `${r.rotational_speed_rpm.toFixed(0)} RPM` : "1500 RPM"}
+                    {r && typeof r.rotational_speed_rpm === "number" ? `${r.rotational_speed_rpm.toFixed(0)} RPM` : "1500 RPM"}
                   </div>
                   <div className="sensor-gauge-sub">Spindle Tachometer</div>
                 </div>
@@ -1673,7 +1677,7 @@ export function DashboardPage({
                     <span className="sensor-gauge-icon">⚙️</span>
                   </div>
                   <div className="sensor-gauge-val">
-                    {r ? `${r.torque_nm.toFixed(1)} Nm` : "40.0 Nm"}
+                    {r && typeof r.torque_nm === "number" ? `${r.torque_nm.toFixed(1)} Nm` : "40.0 Nm"}
                   </div>
                   <div className="sensor-gauge-sub">Inverter Drive Load</div>
                 </div>
@@ -1684,7 +1688,7 @@ export function DashboardPage({
                     <span className="sensor-gauge-icon">⏳</span>
                   </div>
                   <div className="sensor-gauge-val">
-                    {r ? `${r.tool_wear_min} min` : "0 min"}
+                    {r && typeof r.tool_wear_min === "number" ? `${r.tool_wear_min} min` : "0 min"}
                   </div>
                   <div className="sensor-gauge-sub">Cumulative Inserts</div>
                 </div>
@@ -1694,10 +1698,10 @@ export function DashboardPage({
                     <span className="sensor-gauge-title">ML Risk &amp; Health</span>
                     <span className="sensor-gauge-icon">🧠</span>
                   </div>
-                  <div className="sensor-gauge-val" style={{ color: health >= 75 ? "#059669" : health >= 45 ? "#d97706" : "#dc2626" }}>
-                    {health.toFixed(1)}%
+                  <div className="sensor-gauge-val" style={{ color: (typeof health === "number" ? health : 100) >= 75 ? "#059669" : (typeof health === "number" ? health : 100) >= 45 ? "#d97706" : "#dc2626" }}>
+                    {typeof health === "number" ? `${health.toFixed(1)}%` : "100.0%"}
                   </div>
-                  <div className="sensor-gauge-sub">{risk} · {(failProb * 100).toFixed(1)}% Fail Prob</div>
+                  <div className="sensor-gauge-sub">{risk} · {typeof failProb === "number" ? (failProb * 100).toFixed(1) : "2.0"}% Fail Prob</div>
                 </div>
               </>
             );
@@ -1738,9 +1742,9 @@ export function DashboardPage({
               </thead>
               <tbody>
                 {machines.slice(0, 8).map((m) => {
-                  const prob = m.current_failure_probability ?? 0.05;
-                  const health = m.current_health_score ?? 95.0;
-                  const risk = m.current_risk_level || "NOMINAL";
+                  const prob = typeof m.current_failure_probability === "number" ? m.current_failure_probability : (typeof m.failure_probability === "number" ? m.failure_probability : 0.05);
+                  const health = typeof m.current_health_score === "number" ? m.current_health_score : (typeof m.health_score === "number" ? m.health_score : 95.0);
+                  const risk = m.current_risk_level || m.risk_level || "NOMINAL";
 
                   return (
                     <tr key={m.machine_id}>

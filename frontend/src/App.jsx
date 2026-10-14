@@ -10,6 +10,7 @@ import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { MaintenancePage } from "./pages/MaintenancePage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { SettingsModal } from "./components/SettingsModal";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const VALID_VIEWS = [
   "dashboard",
@@ -240,54 +241,56 @@ export function App() {
           onToggleSidebar={() => setIsSidebarCollapsed((p) => !p)}
         />
 
-        {(currentView === "dashboard" || currentView === "operations") && (
-          <DashboardPage
-            key={refreshTick}
-            onSelectMachine={handleSelectMachine}
-            latestTelemetry={latestPayload}
-            wsStatus={connectionStatus}
-            lastTimestamp={lastTimestamp}
-            onReconnect={reconnect}
-            onNavigate={navigateTo}
-          />
-        )}
+        <ErrorBoundary key={currentView}>
+          {(currentView === "dashboard" || currentView === "operations") && (
+            <DashboardPage
+              key={refreshTick}
+              onSelectMachine={handleSelectMachine}
+              latestTelemetry={latestPayload}
+              wsStatus={connectionStatus}
+              lastTimestamp={lastTimestamp}
+              onReconnect={reconnect}
+              onNavigate={navigateTo}
+            />
+          )}
 
-        {currentView === "machines" && (
-          <MachinesPage
-            key={refreshTick}
-            onSelectMachine={handleSelectMachine}
-            latestTelemetry={latestPayload}
-          />
-        )}
+          {currentView === "machines" && (
+            <MachinesPage
+              key={refreshTick}
+              onSelectMachine={handleSelectMachine}
+              latestTelemetry={latestPayload}
+            />
+          )}
 
-        {currentView === "machine-detail" && (
-          <MachineDetailPage
-            key={`${selectedMachineId || "default"}-${refreshTick}`}
-            machineId={selectedMachineId}
-            onBack={() => navigateTo("machines")}
-            latestTelemetry={latestPayload}
-          />
-        )}
+          {currentView === "machine-detail" && (
+            <MachineDetailPage
+              key={`${selectedMachineId || "default"}-${refreshTick}`}
+              machineId={selectedMachineId}
+              onBack={() => navigateTo("machines")}
+              latestTelemetry={latestPayload}
+            />
+          )}
 
-        {currentView === "analytics" && <AnalyticsPage key={refreshTick} />}
+          {currentView === "analytics" && <AnalyticsPage key={refreshTick} />}
 
-        {currentView === "maintenance" && (
-          <MaintenancePage
-            key={refreshTick}
-            onSelectMachine={handleSelectMachine}
-            operator={operator}
-            latestTelemetry={latestPayload}
-          />
-        )}
+          {currentView === "maintenance" && (
+            <MaintenancePage
+              key={refreshTick}
+              onSelectMachine={handleSelectMachine}
+              operator={operator}
+              latestTelemetry={latestPayload}
+            />
+          )}
 
-        {currentView === "alerts" && (
-          <AlertsPage
-            key={refreshTick}
-            onSelectMachine={handleSelectMachine}
-            operator={operator}
-            latestTelemetry={latestPayload}
-          />
-        )}
+          {currentView === "alerts" && (
+            <AlertsPage
+              key={refreshTick}
+              onSelectMachine={handleSelectMachine}
+              operator={operator}
+              latestTelemetry={latestPayload}
+            />
+          )}
+        </ErrorBoundary>
       </div>
 
       <SettingsModal

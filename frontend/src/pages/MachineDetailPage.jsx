@@ -413,7 +413,7 @@ export function MachineDetailPage({ machineId, onBack, latestTelemetry }) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          {healthScore !== null && (
+          {typeof healthScore === "number" && (
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 11, textTransform: "uppercase", color: "var(--text-muted)" }}>Health Index</div>
               <strong
@@ -433,7 +433,7 @@ export function MachineDetailPage({ machineId, onBack, latestTelemetry }) {
             </div>
           )}
 
-          {failureProb !== null && (
+          {typeof failureProb === "number" && (
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 11, textTransform: "uppercase", color: "var(--text-muted)" }}>Failure Probability</div>
               <strong style={{ fontFamily: "var(--font-mono)", fontSize: 22, color: "var(--text-primary)" }}>

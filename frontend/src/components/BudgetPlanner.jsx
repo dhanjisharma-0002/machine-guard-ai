@@ -711,17 +711,17 @@ export function BudgetPlanner({ onSelectMachine, onPlanCreated }) {
                         <td>
                           <StatusBadge status={asset.risk_level} />
                         </td>
-                        <td className="mono" style={{ fontWeight: 700, color: asset.failure_probability > 0.7 ? "#f87171" : "#fbbf24" }}>
-                          {(asset.failure_probability * 100).toFixed(1)}%
+                        <td className="mono" style={{ fontWeight: 700, color: (asset.failure_probability || 0) > 0.7 ? "#f87171" : "#fbbf24" }}>
+                          {typeof asset.failure_probability === "number" ? `${(asset.failure_probability * 100).toFixed(1)}%` : "0.0%"}
                         </td>
-                        <td className="mono" style={{ fontWeight: 700, color: asset.health_score >= 70 ? "#34d399" : asset.health_score >= 40 ? "#fbbf24" : "#f87171" }}>
-                          {asset.health_score.toFixed(1)} / 100
+                        <td className="mono" style={{ fontWeight: 700, color: (asset.health_score || 0) >= 70 ? "#34d399" : (asset.health_score || 0) >= 40 ? "#fbbf24" : "#f87171" }}>
+                          {typeof asset.health_score === "number" ? `${asset.health_score.toFixed(1)} / 100` : "—"}
                         </td>
                         <td className="mono" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                          {formatINR(asset.estimated_repair_cost)}
+                          {formatINR(asset.estimated_repair_cost ?? asset.estimated_cost ?? 0)}
                         </td>
                         <td className="mono">
-                          {asset.expected_downtime_hours} hrs
+                          {asset.expected_downtime_hours ?? 0} hrs
                         </td>
                         <td style={{ fontSize: 12, maxWidth: 280 }}>
                           <span title={asset.recommended_action}>
