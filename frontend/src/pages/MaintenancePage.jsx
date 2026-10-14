@@ -98,15 +98,25 @@ export function MaintenancePage({ onSelectMachine, operator }) {
 
       if (dashData) {
         setSummary(dashData.summary || {});
-        setDueItems(dashData.due || []);
-        setPendingOrders(dashData.pending || []);
-        setAssignedOrders(dashData.assigned || []);
-        setInProgressOrders(dashData.in_progress || []);
-        setCompletedOrders(dashData.completed || []);
-        setTechnicians(dashData.technicians || techData || []);
+        setDueItems(Array.isArray(dashData.due) ? dashData.due : []);
+        setPendingOrders(Array.isArray(dashData.pending) ? dashData.pending : []);
+        setAssignedOrders(Array.isArray(dashData.assigned) ? dashData.assigned : []);
+        setInProgressOrders(Array.isArray(dashData.in_progress) ? dashData.in_progress : []);
+        setCompletedOrders(Array.isArray(dashData.completed) ? dashData.completed : []);
+        const techs = Array.isArray(dashData.technicians)
+          ? dashData.technicians
+          : Array.isArray(techData)
+          ? techData
+          : [];
+        setTechnicians(techs);
       }
       if (queueData) {
-        setWorkQueue(queueData);
+        const queueList = Array.isArray(queueData)
+          ? queueData
+          : Array.isArray(queueData.queue)
+          ? queueData.queue
+          : [];
+        setWorkQueue(queueList);
       }
     } catch (err) {
       setError(err.message || "Failed to load maintenance operations dashboard.");
@@ -233,10 +243,11 @@ export function MaintenancePage({ onSelectMachine, operator }) {
         api.getMachineWorkflowHistory(order.machine_id).catch(() => []),
       ]);
       setSelectedOrder(fullOrder);
-      const filteredLogs = logs.filter(
+      const safeLogs = Array.isArray(logs) ? logs : [];
+      const filteredLogs = safeLogs.filter(
         (l) => l.maintenance_id === order.request_id || (l.notes && l.notes.includes(order.request_id))
       );
-      setAuditLogs(filteredLogs.length > 0 ? filteredLogs : logs.slice(0, 10));
+      setAuditLogs(filteredLogs.length > 0 ? filteredLogs : safeLogs.slice(0, 10));
     } catch {
       // Keep selectedOrder
     }
@@ -605,12 +616,40 @@ export function MaintenancePage({ onSelectMachine, operator }) {
     return matchesSearch && matchesPriority && matchesTech;
   }
 
+  const safeWorkQueue = Array.isArray(workQueue) ? workQueue : [];
+  const safePending = Array.isArray(pendingOrders) ? pendingOrders : [];
+  const safeAssigned = Array.isArray(assignedOrders) ? assignedOrders : [];
+  const safeInProgress = Array.isArray(inProgressOrders) ? inProgressOrders : [];
+  const safeCompleted = Array.isArray(completedOrders) ? completedOrders : [];
+  const safeDue = Array.isArray(dueItems) ? dueItems : [];
+  const safeTechnicians = Array.isArray(technicians) ? technicians : [];
+  const safeAuditLogs = Array.isArray(auditLogs) ? auditLogs : [];
+
   const allOrdersList = [
-    ...pendingOrders,
-    ...assignedOrders,
-    ...inProgressOrders,
-    ...completedOrders,
+    ...safePending,
+    ...safeAssigned,
+    ...safeInProgress,
+    ...safeCompleted,
   ];
+
+  const activeOrdersPool = safeWorkQueue.length > 0
+    ? safeWorkQueue
+    : [...safeAssigned, ...safeInProgress];
+
+  const queueFilteredOrders = activeOrdersPool.filter((order) => {
+    if (!matchesFilter(order)) return false;
+    if (activeTab === "assigned") {
+      return order.status === "ASSIGNED" || order.status === "TECHNICIAN_ARRIVED";
+    }
+    if (activeTab === "in_progress") {
+      return (
+        order.status === "INSPECTION" ||
+        order.status === "REPAIR_IN_PROGRESS" ||
+        order.status === "IN_PROGRESS"
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="page-body maintenance-page">
@@ -720,49 +759,49 @@ export function MaintenancePage({ onSelectMachine, operator }) {
             className={`m-tab ${activeTab === "queue" ? "active" : ""}`}
             onClick={() => setActiveTab("queue")}
           >
-            ⚡ Technician Queue ({workQueue.length})
+            ⚡ Technician Queue ({safeWorkQueue.length})
           </button>
           <button
             id="tab-due"
             className={`m-tab ${activeTab === "due" ? "active" : ""}`}
             onClick={() => setActiveTab("due")}
           >
-            🔔 Predicted Needs ({dueItems.length})
+            🔔 Predicted Needs ({safeDue.length})
           </button>
           <button
             id="tab-pending"
             className={`m-tab ${activeTab === "pending" ? "active" : ""}`}
             onClick={() => setActiveTab("pending")}
           >
-            ⏳ Open ({pendingOrders.length})
+            ⏳ Open ({safePending.length})
           </button>
           <button
             id="tab-assigned"
             className={`m-tab ${activeTab === "assigned" ? "active" : ""}`}
             onClick={() => setActiveTab("assigned")}
           >
-            🚚 Assigned ({assignedOrders.length})
+            🚚 Assigned ({safeAssigned.length || safeWorkQueue.filter((o) => o.status === "ASSIGNED" || o.status === "TECHNICIAN_ARRIVED").length})
           </button>
           <button
             id="tab-inprogress"
             className={`m-tab ${activeTab === "in_progress" ? "active" : ""}`}
             onClick={() => setActiveTab("in_progress")}
           >
-            ⚙️ In Progress ({inProgressOrders.length})
+            ⚙️ In Progress ({safeInProgress.length || safeWorkQueue.filter((o) => o.status === "IN_PROGRESS" || o.status === "INSPECTION" || o.status === "REPAIR_IN_PROGRESS").length})
           </button>
           <button
             id="tab-completed"
             className={`m-tab ${activeTab === "completed" ? "active" : ""}`}
             onClick={() => setActiveTab("completed")}
           >
-            ✅ History ({completedOrders.length})
+            ✅ History ({safeCompleted.length})
           </button>
           <button
             id="tab-technicians"
             className={`m-tab ${activeTab === "technicians" ? "active" : ""}`}
             onClick={() => setActiveTab("technicians")}
           >
-            👥 Technicians ({technicians.length})
+            👥 Technicians ({safeTechnicians.length})
           </button>
         </div>
 
@@ -797,20 +836,32 @@ export function MaintenancePage({ onSelectMachine, operator }) {
       ) : (
         <div className="maintenance-content-sections">
           {/* SECTION: Technician Work Queue */}
-          {(activeTab === "all" || activeTab === "queue") && (
+          {(activeTab === "all" || activeTab === "queue" || activeTab === "assigned" || activeTab === "in_progress") && (
             <div className="m-section-card">
               <div className="m-section-header">
                 <div>
-                  <h2 className="m-section-title">⚡ Technician Active Work Queue</h2>
-                  <p className="m-section-sub">Field technicians actively dispatched or servicing assets across production bays.</p>
+                  <h2 className="m-section-title">
+                    {activeTab === "assigned"
+                      ? "🚚 Assigned & En Route Work Orders"
+                      : activeTab === "in_progress"
+                      ? "⚙️ Active Repairs & Inspections"
+                      : "⚡ Technician Active Work Queue"}
+                  </h2>
+                  <p className="m-section-sub">
+                    {activeTab === "assigned"
+                      ? "Work orders with assigned technicians en route to the production line."
+                      : activeTab === "in_progress"
+                      ? "Work orders currently undergoing mechanical inspection or active component repair."
+                      : "Field technicians actively dispatched or servicing assets across production bays."}
+                  </p>
                 </div>
-                <span className="count-badge">{workQueue.length} Active Jobs</span>
+                <span className="count-badge">{queueFilteredOrders.length} Active Jobs</span>
               </div>
 
-              {workQueue.length === 0 ? (
+              {queueFilteredOrders.length === 0 ? (
                 <EmptyState
-                  title="No Active Technician Assignments"
-                  message="There are currently no active work orders assigned to field technicians."
+                  title={activeTab === "assigned" ? "No Assigned Work Orders" : activeTab === "in_progress" ? "No Active Repairs" : "No Active Technician Assignments"}
+                  message="There are currently no active work orders matching this filter."
                 />
               ) : (
                 <div className="table-responsive">
@@ -828,7 +879,7 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {workQueue.filter(matchesFilter).map((order) => {
+                      {queueFilteredOrders.map((order) => {
                         return (
                           <tr key={order.request_id} className={`priority-row-${order.priority?.toLowerCase()}`}>
                             <td>
@@ -945,17 +996,17 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                   <h2 className="m-section-title">🔔 Predicted Maintenance Needs (Due)</h2>
                   <p className="m-section-sub">Autonomous ML risk thresholds and condition-based anomaly breaches requiring dispatch.</p>
                 </div>
-                <span className="count-badge count-due">{dueItems.length} Due</span>
+                <span className="count-badge count-due">{safeDue.length} Due</span>
               </div>
 
-              {dueItems.length === 0 ? (
+              {safeDue.length === 0 ? (
                 <EmptyState
                   title="No Pending AI Recommendations"
                   message="All machines are currently within normal operating envelope tolerances."
                 />
               ) : (
                 <div className="predictions-cards-grid">
-                  {dueItems.map((pred) => (
+                  {safeDue.map((pred) => (
                     <div key={pred.recommendation_id} className="pred-card">
                       <div className="pred-card-header">
                         <span className="pred-machine" onClick={() => onSelectMachine && onSelectMachine(pred.machine_id)}>
@@ -997,10 +1048,10 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                   <h2 className="m-section-title">⏳ Open & Pending Work Orders</h2>
                   <p className="m-section-sub">Confirmed work orders logged by Reliability Engineering awaiting Maintenance Lead dispatch.</p>
                 </div>
-                <span className="count-badge count-pending">{pendingOrders.length} Pending</span>
+                <span className="count-badge count-pending">{safePending.length} Pending</span>
               </div>
 
-              {pendingOrders.length === 0 ? (
+              {safePending.length === 0 ? (
                 <EmptyState title="No Pending Orders" message="No unassigned work orders in queue." />
               ) : (
                 <div className="table-responsive">
@@ -1017,7 +1068,7 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {pendingOrders.filter(matchesFilter).map((order) => (
+                      {safePending.filter(matchesFilter).map((order) => (
                         <tr key={order.request_id}>
                           <td><strong>{order.request_id}</strong></td>
                           <td>
@@ -1069,10 +1120,10 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                   <h2 className="m-section-title">✅ Completed & Closed Maintenance History</h2>
                   <p className="m-section-sub">Historical audit records, root-cause findings, duration, and verified costs in INR (₹).</p>
                 </div>
-                <span className="count-badge count-completed">{completedOrders.length} Completed</span>
+                <span className="count-badge count-completed">{safeCompleted.length} Completed</span>
               </div>
 
-              {completedOrders.length === 0 ? (
+              {safeCompleted.length === 0 ? (
                 <EmptyState title="No History Records" message="No maintenance history records found." />
               ) : (
                 <div className="table-responsive">
@@ -1091,7 +1142,7 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {completedOrders.filter(matchesFilter).map((order) => (
+                      {safeCompleted.filter(matchesFilter).map((order) => (
                         <tr key={order.request_id}>
                           <td><strong>{order.request_id}</strong></td>
                           <td>
@@ -1146,14 +1197,14 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                 </button>
               </div>
 
-              {technicians.length === 0 ? (
+              {safeTechnicians.length === 0 ? (
                 <EmptyState
                   title="No Technicians Registered"
                   message="Click 'Register New Technician' to add certified maintenance personnel."
                 />
               ) : (
                 <div className="technicians-grid">
-                  {technicians.map((tech) => (
+                  {safeTechnicians.map((tech) => (
                     <div key={tech.technician_id} className="tech-profile-card">
                       <div className="tech-profile-header">
                         <div className="tech-avatar-box">👷</div>
@@ -1307,7 +1358,7 @@ export function MaintenancePage({ onSelectMachine, operator }) {
 
                 <div className="form-group full-width">
                   <label>Select Certified Field Technician *</label>
-                  {technicians.length === 0 ? (
+                  {safeTechnicians.length === 0 ? (
                     <div className="alert-inline">
                       No technicians registered yet.
                       <button type="button" className="btn btn-xs btn-secondary" onClick={() => setModalType("NEW_TECH")}>
@@ -1322,7 +1373,7 @@ export function MaintenancePage({ onSelectMachine, operator }) {
                       onChange={(e) => setFormData({ ...formData, technician_id: e.target.value })}
                     >
                       <option value="">-- Choose Field Technician --</option>
-                      {technicians.map((t) => (
+                      {safeTechnicians.map((t) => (
                         <option key={t.technician_id} value={t.technician_id}>
                           {t.technician_name} ({t.specialization}) — [{t.status}]
                         </option>
@@ -2042,11 +2093,11 @@ export function MaintenancePage({ onSelectMachine, operator }) {
               </div>
 
               {/* AUDIT TRAIL LEDGER */}
-              {auditLogs.length > 0 && (
+              {safeAuditLogs.length > 0 && (
                 <div className="audit-ledger-card">
                   <div className="detail-card-title">📜 Workflow Audit History Ledger</div>
                   <div className="audit-list">
-                    {auditLogs.map((log) => (
+                    {safeAuditLogs.map((log) => (
                       <div key={log.id} className="audit-item">
                         <div className="audit-time">{formatTimestamp(log.created_at)}</div>
                         <div className="audit-body">

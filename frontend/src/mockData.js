@@ -629,11 +629,14 @@ export function getMockResponse(endpoint) {
       pending: [
         {
           id: 603,
+          request_id: "WO-603",
           work_order_id: "WO-603",
           machine_id: "H39881",
+          machine_type: "H",
           issue: "Power overload variance",
           priority: "HIGH",
           status: "PENDING",
+          requested_by: "Lead Reliability Engineer",
           estimated_cost: 9200,
           created_at: new Date(Date.now() - 3600000).toISOString(),
         },
@@ -641,23 +644,38 @@ export function getMockResponse(endpoint) {
       assigned: [
         {
           id: 601,
+          request_id: "WO-601",
           work_order_id: "WO-601",
           machine_id: "H39880",
-          issue: "Overstrain prevention",
+          machine_type: "H",
+          issue: "Overstrain prevention and spindle check.",
+          priority: "CRITICAL",
+          technician_id: "TECH-01",
+          assigned_to: "Dhananjay Sharma",
           technician_name: "Dhananjay Sharma",
           status: "ASSIGNED",
           estimated_cost: 14500,
+          technician_assigned_at: new Date(Date.now() - 25 * 60000).toISOString(),
+          created_at: new Date(Date.now() - 30 * 60000).toISOString(),
         },
       ],
       in_progress: [
         {
           id: 602,
+          request_id: "WO-602",
           work_order_id: "WO-602",
           machine_id: "L47180",
-          issue: "Thermal sensor replacement",
+          machine_type: "L",
+          issue: "Thermal sensor replacement & heat exchanger cleaning.",
+          priority: "HIGH",
+          technician_id: "TECH-02",
+          assigned_to: "Abhishek Upadhyay",
           technician_name: "Abhishek Upadhyay",
           status: "IN_PROGRESS",
           estimated_cost: 8200,
+          technician_assigned_at: new Date(Date.now() - 50 * 60000).toISOString(),
+          technician_arrived_at: new Date(Date.now() - 30 * 60000).toISOString(),
+          created_at: new Date(Date.now() - 60 * 60000).toISOString(),
         },
       ],
       completed: DEMO_RECENT_REPAIRS,
@@ -665,7 +683,40 @@ export function getMockResponse(endpoint) {
     };
   }
   if (cleanEndpoint === "/api/maintenance/queue") {
-    return { queue: [] };
+    return [
+      {
+        id: 601,
+        request_id: "WO-601",
+        work_order_id: "WO-601",
+        machine_id: "H39880",
+        machine_type: "H",
+        issue: "Overstrain prevention and spindle check.",
+        priority: "CRITICAL",
+        technician_id: "TECH-01",
+        assigned_to: "Dhananjay Sharma",
+        technician: DEMO_TECHNICIANS[0],
+        status: "ASSIGNED",
+        technician_assigned_at: new Date(Date.now() - 25 * 60000).toISOString(),
+        technician_arrived_at: new Date(Date.now() - 5 * 60000).toISOString(),
+        created_at: new Date(Date.now() - 30 * 60000).toISOString(),
+      },
+      {
+        id: 602,
+        request_id: "WO-602",
+        work_order_id: "WO-602",
+        machine_id: "L47180",
+        machine_type: "L",
+        issue: "Thermal sensor replacement & heat exchanger cleaning.",
+        priority: "HIGH",
+        technician_id: "TECH-02",
+        assigned_to: "Abhishek Upadhyay",
+        technician: DEMO_TECHNICIANS[1],
+        status: "IN_PROGRESS",
+        technician_assigned_at: new Date(Date.now() - 50 * 60000).toISOString(),
+        technician_arrived_at: new Date(Date.now() - 30 * 60000).toISOString(),
+        created_at: new Date(Date.now() - 60 * 60000).toISOString(),
+      },
+    ];
   }
   if (cleanEndpoint === "/api/technicians") {
     return DEMO_TECHNICIANS;
